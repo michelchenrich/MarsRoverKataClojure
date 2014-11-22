@@ -5,20 +5,22 @@
     :x (-> rover (get :grid) (get :width))
     :y (-> rover (get :grid) (get :height))))
 
-(defn- wrap-position [wanted-position limit-position]
-  (if (< wanted-position 0)
-    limit-position
-    (if (> wanted-position limit-position)
-      0
-      wanted-position)))
+(defn- wrap-position [wanted-position upper-limit]
+  (let [lower-limit 0]
+    (cond
+      (< wanted-position lower-limit) upper-limit
+      (> wanted-position upper-limit) lower-limit
+      :else wanted-position)))
 
 (defn- move [rover sign axis]
   (let [wanted (-> rover (get axis) (sign 1))
         limit (-> rover (limit-of axis) (- 1))]
     (assoc rover axis (wrap-position wanted limit))))
 
-(defn- turn [rover to-side]
-  (assoc rover :direction (to-side)))
+(declare directions)
+
+(defn- turn [rover side]
+  (assoc rover :direction (get directions side)))
 
 (defn- make-handlers [in-axis forward to-the-left to-the-right]
   (let [backward (if (= + forward) - +)]
@@ -27,19 +29,16 @@
      :turn-left (fn [rover] (turn rover to-the-left))
      :turn-right (fn [rover] (turn rover to-the-right))}))
 
-;the anonymous functions are needed to avoid cyclic dependencies, because the make-handlers function has to determine to
-;which direction to turn, but it also has to be called in order to have the directions, so we have to make them be
-;lazily evaluated at the moment of turning
 (def ^:private directions
-  {:north {:name :north :handlers (make-handlers :y - (fn [] (get directions :west)) (fn [] (get directions :east)))}
-   :south {:name :south :handlers (make-handlers :y + (fn [] (get directions :east)) (fn [] (get directions :west)))}
-   :west {:name :west :handlers (make-handlers :x - (fn [] (get directions :south)) (fn [] (get directions :north)))}
-   :east {:name :east :handlers (make-handlers :x + (fn [] (get directions :north)) (fn [] (get directions :south)))}})
+  {:north {:name :north :handlers (make-handlers :y - :west :east)}
+   :south {:name :south :handlers (make-handlers :y + :east :west)}
+   :west {:name :west :handlers (make-handlers :x - :south :north)}
+   :east {:name :east :handlers (make-handlers :x + :north :south)}})
 
 (defn make [x y direction grid]
   {:x x :y y :direction (get directions direction) :grid grid})
 
-(defn- execute [rover command]
+(defn execute [rover command]
   ((-> rover (get :direction) (get :handlers) (get command)) rover))
 
 (defn execute-many [rover commands]
