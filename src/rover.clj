@@ -23,9 +23,9 @@
      :turn-left (fn [rover] (turn rover to-the-left))
      :turn-right (fn [rover] (turn rover to-the-right))}))
 
-;the anonymous functions are needed to avoid cyclic dependencies, since the make-handlers function has to determine to
-;which direction to turn, but make-handlers has to be called in order to have the directions, so we have to make then be
-;lazily evaluated
+;the anonymous functions are needed to avoid cyclic dependencies, because the make-handlers function has to determine to
+;which direction to turn, but it also has to be called in order to have the directions, so we have to make them be
+;lazily evaluated at the moment of turning
 (def ^:private directions
   {:north {:name :north :handlers (make-handlers :y - (fn [] (get directions :west)) (fn [] (get directions :east)))}
    :south {:name :south :handlers (make-handlers :y + (fn [] (get directions :east)) (fn [] (get directions :west)))}
