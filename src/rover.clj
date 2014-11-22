@@ -1,42 +1,40 @@
 (ns rover)
 
-(defn- get-grid [limit rover]
-  (get (get rover :grid) limit))
-
-(defn- limit [rover axis]
+(defn- limit-of [rover axis]
   (case axis
-    :y (get-grid :height rover)
-    :x (get-grid :width rover)))
+    :x (-> rover (get :grid) (get :width))
+    :y (-> rover (get :grid) (get :height))))
 
-(defn- move-forward [rover axis forward-sign]
-  (let [old-position (get rover axis)
-        wanted-position (forward-sign old-position 1)
-        border-position (- (limit rover axis) 1)
-        new-position (if (> wanted-position -1) wanted-position border-position)]
+(defn- move [rover sign axis]
+  (let [wanted-position (-> rover (get axis) (sign 1))
+        wrapped-position (-> rover (limit-of axis) (- 1))
+        new-position (if (> wanted-position -1) wanted-position wrapped-position)]
     (assoc rover axis new-position)))
 
-(defn- make-actions [axis forward-sign left-turner right-turner]
-  (let [backward-sign (if (= + forward-sign) - +)]
-    {:forward (fn [rover] (move-forward rover axis forward-sign))
-     :backward (fn [rover] (assoc rover axis (backward-sign (get rover axis) 1)))
-     :turn-left (fn [rover] (assoc rover :direction (left-turner)))
-     :turn-right (fn [rover] (assoc rover :direction (right-turner)))}))
+(defn- turn [rover to-side]
+  (assoc rover :direction (to-side)))
 
-;the anonymous functions are here to avoid cyclic dependencies, since the make-actions function has to determine the
-;direction to turn, but make-actions has to be called in order to have the directions, so we have to make then be lazily
-;evaluated
+(defn- make-handlers [in-axis forward to-the-left to-the-right]
+  (let [backward (if (= + forward) - +)]
+    {:forward (fn [rover] (move rover forward in-axis))
+     :backward (fn [rover] (move rover backward in-axis))
+     :turn-left (fn [rover] (turn rover to-the-left))
+     :turn-right (fn [rover] (turn rover to-the-right))}))
+
+;the anonymous functions are needed to avoid cyclic dependencies, since the make-handlers function has to determine to
+;which direction to turn, but make-handlers has to be called in order to have the directions, so we have to make then be
+;lazily ;evaluated
 (def ^:private directions
-  {:north {:name :north :actions (make-actions :y - (fn [] (get directions :west)) (fn [] (get directions :east)))}
-   :south {:name :south :actions (make-actions :y + (fn [] (get directions :east)) (fn [] (get directions :west)))}
-   :west {:name :west :actions (make-actions :x - (fn [] (get directions :south)) (fn [] (get directions :north)))}
-   :east {:name :east :actions (make-actions :x + (fn [] (get directions :north)) (fn [] (get directions :south)))}})
+  {:north {:name :north :handlers (make-handlers :y - (fn [] (get directions :west)) (fn [] (get directions :east)))}
+   :south {:name :south :handlers (make-handlers :y + (fn [] (get directions :east)) (fn [] (get directions :west)))}
+   :west {:name :west :handlers (make-handlers :x - (fn [] (get directions :south)) (fn [] (get directions :north)))}
+   :east {:name :east :handlers (make-handlers :x + (fn [] (get directions :north)) (fn [] (get directions :south)))}})
 
-(defn make
-  [x y direction-name grid]
-  {:x x :y y :direction (get directions direction-name) :grid grid})
+(defn make [x y direction grid]
+  {:x x :y y :direction (get directions direction) :grid grid})
 
 (defn- execute [rover command]
-  ((get (get (get rover :direction) :actions) command) rover))
+  ((-> rover (get :direction) (get :handlers) (get command)) rover))
 
 (defn execute-many [rover commands]
   (reduce execute rover commands))
