@@ -8,7 +8,9 @@
 (defn- move [rover sign axis]
   (let [wanted-position (-> rover (get axis) (sign 1))
         wrapped-position (-> rover (limit-of axis) (- 1))
-        new-position (if (> wanted-position -1) wanted-position wrapped-position)]
+        new-position (if (> wanted-position -1)
+                       wanted-position
+                       wrapped-position)]
     (assoc rover axis new-position)))
 
 (defn- turn [rover to-side]
