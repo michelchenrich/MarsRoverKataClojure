@@ -5,13 +5,17 @@
     :x (-> rover (get :grid) (get :width))
     :y (-> rover (get :grid) (get :height))))
 
+(defn- wrap-position [wanted-position limit-position]
+  (if (< wanted-position 0)
+    limit-position
+    (if (> wanted-position limit-position)
+      0
+      wanted-position)))
+
 (defn- move [rover sign axis]
-  (let [wanted-position (-> rover (get axis) (sign 1))
-        wrapped-position (-> rover (limit-of axis) (- 1))
-        new-position (if (> wanted-position -1)
-                       wanted-position
-                       wrapped-position)]
-    (assoc rover axis new-position)))
+  (let [wanted (-> rover (get axis) (sign 1))
+        limit (-> rover (limit-of axis) (- 1))]
+    (assoc rover axis (wrap-position wanted limit))))
 
 (defn- turn [rover to-side]
   (assoc rover :direction (to-side)))

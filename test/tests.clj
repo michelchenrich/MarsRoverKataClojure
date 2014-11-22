@@ -21,9 +21,7 @@
         (testing "turning left"
           (assert-position (rover/execute-many rover '(:turn-left)) 1 1 :west))
         (testing "turning right"
-          (assert-position (rover/execute-many rover '(:turn-right)) 1 1 :east))
-        (testing "moving beyond the limit"
-          (assert-position (rover/execute-many rover '(:forward :forward)) 1 9 :north))))
+          (assert-position (rover/execute-many rover '(:turn-right)) 1 1 :east))))
 
     (testing "facing south"
       (let [rover (rover/make 1 1 :south grid)]
@@ -61,6 +59,24 @@
     (testing "many commands"
       (let [rover (rover/make 1 1 :north grid)
             commands '(:forward :turn-right :forward :turn-right :forward :turn-right :forward)]
-        (assert-position (rover/execute-many rover commands) 1 1 :west)))))
+        (assert-position (rover/execute-many rover commands) 1 1 :west)))
+
+    (testing "wrapping by"
+      (testing "facing north and moving forward"
+        (assert-position (rover/execute-many (rover/make 0 0 :north grid) '(:forward)) 0 9 :north))
+      (testing "facing north and moving backward"
+        (assert-position (rover/execute-many (rover/make 0 9 :north grid) '(:backward)) 0 0 :north))
+      (testing "facing south and moving forward"
+        (assert-position (rover/execute-many (rover/make 0 9 :south grid) '(:forward)) 0 0 :south))
+      (testing "facing south and moving backward"
+        (assert-position (rover/execute-many (rover/make 0 0 :south grid) '(:backward)) 0 9 :south))
+      (testing "facing east and moving forward"
+        (assert-position (rover/execute-many (rover/make 9 0 :east grid) '(:forward)) 0 0 :east))
+      (testing "facing east and moving backward"
+        (assert-position (rover/execute-many (rover/make 0 0 :east grid) '(:backward)) 9 0 :east))
+      (testing "facing west and moving forward"
+        (assert-position (rover/execute-many (rover/make 0 0 :west grid) '(:forward)) 9 0 :west))
+      (testing "facing west and moving backward"
+        (assert-position (rover/execute-many (rover/make 9 0 :west grid) '(:backward)) 0 0 :west)))))
 
 (run-tests 'rover-tests)
